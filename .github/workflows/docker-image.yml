@@ -7,6 +7,7 @@ on:
   push:
     paths:
       - 'Dockerfile'
+      - 'config.toml'
       - '.github/workflows/docker-image.yml'
     branches:
       - master
