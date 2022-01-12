@@ -26,6 +26,6 @@ RUN set -eux; \
     ./rustup-init -y --no-modify-path --profile minimal --default-toolchain $RUST_VERSION --default-host ${rustArch}; \
     rm rustup-init; \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
-    find /usr/local/rustup/ -type f -executable -exec strip --strip-unneeded {} \; && find /usr/local/rustup/ -name *.so -exec strip --strip-unneeded {} \; && find /usr/local/rustup/ -name *.rlib -exec strip -d {} \; && find /usr/local/rustup/ -name *.a -exec strip -d {} \;
+    find $RUSTUP_HOME -type f -executable -exec strip --strip-unneeded {} \; && find $RUSTUP_HOME -name *.so -exec strip --strip-unneeded {} \; && find $RUSTUP_HOME -name *.rlib -exec strip -d {} \; && find $RUSTUP_HOME -name *.a -exec strip -d {} \;
 
 COPY config.toml /usr/local/cargo/
