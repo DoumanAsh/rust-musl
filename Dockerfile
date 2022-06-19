@@ -5,12 +5,14 @@ RUN apk add --no-cache \
         make \
         git \
         ca-certificates \
-        gcc
+        gcc \
+        g++ \
+        cmake
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=stable
+    RUST_VERSION=stable 
 
 RUN set -eux; \
     apkArch="$(apk --print-arch)"; \
@@ -27,5 +29,3 @@ RUN set -eux; \
     rm rustup-init; \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
     find $RUSTUP_HOME -type f -executable -exec strip --strip-unneeded {} \; && find $RUSTUP_HOME -name *.so -exec strip --strip-unneeded {} \; && find $RUSTUP_HOME -name *.rlib -exec strip -d {} \; && find $RUSTUP_HOME -name *.a -exec strip -d {} \;
-
-COPY config.toml /usr/local/cargo/
