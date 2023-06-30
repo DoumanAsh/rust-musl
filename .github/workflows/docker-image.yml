@@ -1,9 +1,9 @@
 name: Docker
 
 on:
-  # Once a month
+  # Once a week
   schedule:
-    - cron: '0 0 1 * *'
+    - cron: '0 0 * * 0'
   push:
     paths:
       - 'Dockerfile'
@@ -11,6 +11,14 @@ on:
       - '.github/workflows/docker-image.yml'
     branches:
       - master
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - '**'
+    paths:
+      - 'Dockerfile'
+      - 'config.toml'
+      - '.github/workflows/docker-image.yml'
 
 env:
   REGISTRY: docker.io
@@ -19,22 +27,23 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
         with:
           platforms: arm64
 
       - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@79abd3f86f79a9d68a23c75a09a9a85889262adf
+        uses: docker/setup-buildx-action@v2
 
       - name: Log into registry ${{ env.REGISTRY }}
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
           username: douman
@@ -42,10 +51,26 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
 
       - name: Build and push Docker image
-        id: build-and-push
-        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        id: build-docker
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:latest
+
+      - name: Test
+        id: test
+        run: |
+          VERSION=$(docker run --rm ${{ env.IMAGE_NAME }} rustc --version | cut -d" " -f2)
+          echo "::notice ::Rust version $VERSION"
+          echo "rustc_version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Push Docker image
+        id: push-docker
+        uses: docker/build-push-action@v4
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.IMAGE_NAME }}:latest
+          tags: ${{ env.IMAGE_NAME }}:latest , ${{ env.IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}
