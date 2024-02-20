@@ -1,20 +1,12 @@
 FROM alpine:latest
 
-RUN apk add --no-cache \
-        musl-dev \
-        make \
-        git \
-        ca-certificates \
-        gcc \
-        g++ \
-        cmake
-
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
     RUST_VERSION=stable 
 
 RUN set -eux; \
+    apk add --no-cache musl-dev make git ca-certificates gcc g++ cmake ;\
     apkArch="$(apk --print-arch)"; \
     case "$apkArch" in \
         x86_64) rustArch='x86_64-unknown-linux-musl' ;; \
