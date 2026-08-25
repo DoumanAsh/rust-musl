@@ -1,9 +1,10 @@
-FROM alpine:latest
+FROM alpine:3.24
 
+ARG RUST_VERSION=stable
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=stable \
+    RUST_VERSION=$RUST_VERSION \
     RUSTFLAGS="-C link-arg=-fuse-ld=lld"
 
 RUN set -eux; \

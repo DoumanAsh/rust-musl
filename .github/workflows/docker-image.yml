@@ -19,6 +19,13 @@ on:
       - 'Dockerfile'
       - 'config.toml'
       - '.github/workflows/docker-image.yml'
+  workflow_dispatch:
+    inputs:
+      rustc_version:
+        description: 'Rust version'
+        required: false
+        default: ''
+        type: string
 
 env:
   REGISTRY: docker.io
@@ -55,6 +62,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          build-args: "RUST_VERSION=${{ inputs.rustc_version || 'stable' }}"
           platforms: linux/amd64
           load: true
           tags: ${{ env.IMAGE_NAME }}:latest
@@ -71,6 +79,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          build-args: "RUST_VERSION=${{ inputs.rustc_version || 'stable' }}"
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ env.IMAGE_NAME }}:latest , ${{ env.IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}
