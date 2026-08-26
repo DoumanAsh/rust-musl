@@ -70,14 +70,16 @@ jobs:
       - name: Test
         id: test
         run: |
+          echo '### Build docker ${{ inputs.rustc_version || 'stable' }} image 🚀' >> $GITHUB_STEP_SUMMARY
           VERSION=$(docker run --rm ${{ env.IMAGE_NAME }} rustc --version | cut -d" " -f2)
-          echo "::notice ::Rust version $VERSION"
           echo "rustc_version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo '- Rustc version: $VERSION' >> $GITHUB_STEP_SUMMARY
           VERSION=$(echo "$VERSION" | cut -d"." -f 1,2)
           echo "rustc_short_version=$VERSION" >> "$GITHUB_OUTPUT"
           VERSION=$(docker run --rm ${{ env.IMAGE_NAME }} cat /etc/alpine-release | cut -d"." -f 1,2)
           echo "::notice ::Alpine version $VERSION"
           echo "alpine_version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo '- Alpine version: $VERSION' >> $GITHUB_STEP_SUMMARY
 
       - name: Push ${{ inputs.rustc_version }} image
         if: inputs.rustc_version != ''
