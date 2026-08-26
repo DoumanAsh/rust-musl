@@ -25,3 +25,5 @@ Following tags are provided:
 
 If you need to rebuild specific version of container feel free to use workflow for this purpose and specify desired version:
 https://github.com/DoumanAsh/rust-musl/actions/workflows/docker-image.yml
+
+Only collaborator is allowed to trigger workflow, feel free to create issue to request access.
