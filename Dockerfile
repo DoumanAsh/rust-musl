@@ -1,4 +1,4 @@
-FROM alpine:3.24
+FROM alpine:latest
 
 ARG RUST_VERSION=stable
 ENV RUSTUP_HOME=/usr/local/rustup \

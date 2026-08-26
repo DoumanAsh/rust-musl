@@ -73,6 +73,9 @@ jobs:
           VERSION=$(docker run --rm ${{ env.IMAGE_NAME }} rustc --version | cut -d" " -f2)
           echo "::notice ::Rust version $VERSION"
           echo "rustc_version=$VERSION" >> "$GITHUB_OUTPUT"
+          VERSION=$(docker run --rm ${{ env.IMAGE_NAME }} cat /etc/alpine-release | cut -d"." -f 1,2)
+          echo "::notice ::Alpine version $VERSION"
+          echo "alpine_version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Push Docker image
         id: push-docker
@@ -82,4 +85,7 @@ jobs:
           build-args: "RUST_VERSION=${{ inputs.rustc_version || 'stable' }}"
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.IMAGE_NAME }}:latest , ${{ env.IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}
+            ${{ env.IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}-alpine${{ steps.test.outputs.alpine_version }}
