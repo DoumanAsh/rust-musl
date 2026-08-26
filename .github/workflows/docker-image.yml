@@ -57,7 +57,7 @@ jobs:
           ## Set in repo Settings->Secrets->New repository secret
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and test Docker image
         id: build-docker
         uses: docker/build-push-action@v7
         with:
@@ -77,7 +77,21 @@ jobs:
           echo "::notice ::Alpine version $VERSION"
           echo "alpine_version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Push Docker image
+      - name: Push ${{ inputs.rustc_version }} image
+        if: inputs.rustc_version != ''
+        id: push-docker
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          build-args: "RUST_VERSION=${{ inputs.rustc_version || 'stable' }}"
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}
+            ${{ env.IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}-alpine${{ steps.test.outputs.alpine_version }}
+
+      - name: Push latest stable image
+        if: inputs.rustc_version == ''
         id: push-docker
         uses: docker/build-push-action@v7
         with:
