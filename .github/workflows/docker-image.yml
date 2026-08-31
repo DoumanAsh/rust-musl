@@ -39,6 +39,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      pull-requests: write
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
 
@@ -81,7 +82,50 @@ jobs:
           load: true
           tags: ${{ env.IMAGE_NAME }}:latest
 
-      - name: Test
+      - name: Run vulnerability scanner
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: "${{ env.IMAGE_NAME }}:latest"
+          format: 'json'
+          vuln-type: 'os,library'
+          severity: 'LOW,MEDIUM,HIGH,CRITICAL'
+          cache: 'false'
+          output: 'trivy.json'
+          version: latest
+          exit-code: 0
+
+      - name: Generate trivy.html fragment
+        shell: bash
+        env:
+          TRIVY_JSON: trivy.json
+        run: |
+          echo '<h3>Summary</h3>' >> trivy.html
+          echo '<ul>' >> trivy.html
+          jq -r '
+            [.Results[]?.Vulnerabilities[]?.Severity // "UNKNOWN"]
+            | group_by(.) | map("<li>\(.[0]): \(length)</li>") | .[]
+          ' "$TRIVY_JSON" >> trivy.html
+          echo '</ul>' >> trivy.html
+
+          echo '<h3>Full list</h3>' >> trivy.html
+          echo '<table><thead><tr><th>Severity</th><th>PkgName</th><th>InstalledVersion</th><th>FixedVersion</th><th>Status</th><th>Title</th></tr></thead><tbody>' >> trivy.html
+          jq -r '.Results[]?.Vulnerabilities[]?|"<tr><td>\(.Severity//""|@html)</td><td>\(.PkgName//""|@html)</td><td>\(.InstalledVersion//""|@html)</td><td>\(.FixedVersion//""|@html)</td><td>\(.Status//""|@html)</td><td>\(.Title//""|@html)</td></tr>"' "$TRIVY_JSON" >> trivy.html
+          echo '</tbody></table>' >> trivy.html
+
+      - name: Paste Trivy report into github
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          # Pass html fragment as {{{content}}}
+          path: trivy.html
+          # Creates new comment deleting old one
+          recreate: true
+          message: |
+            ## Vulnerabilities report 🔓
+
+            {{{content}}}
+
+      - name: Test and generate summary
         id: test
         run: |
           echo '## Build docker ${{ inputs.rustc_version || 'stable' }} image 🚀' >> $GITHUB_STEP_SUMMARY
@@ -93,9 +137,11 @@ jobs:
           VERSION=$(docker run --rm ${{ env.IMAGE_NAME }} cat /etc/alpine-release | cut -d"." -f 1,2)
           echo "alpine_version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "- Alpine version: $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "## Vulnerabilities report 🔓" >> $GITHUB_STEP_SUMMARY
+          cat trivy.html >> $GITHUB_STEP_SUMMARY
 
       - name: Push ${{ inputs.rustc_version }} image
-        if: inputs.rustc_version != ''
+        if: inputs.rustc_version != '' && github.event_name != 'pull_request'
         id: push-version-docker
         uses: docker/build-push-action@v7
         with:
@@ -114,7 +160,7 @@ jobs:
             ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}-alpine${{ steps.test.outputs.alpine_version }}
 
       - name: Push latest stable image
-        if: inputs.rustc_version == ''
+        if: inputs.rustc_version == '' && github.event_name != 'pull_request'
         id: push-stable-docker
         uses: docker/build-push-action@v7
         with:
