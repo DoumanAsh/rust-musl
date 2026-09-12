@@ -5,10 +5,11 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
     RUST_VERSION=$RUST_VERSION \
-    RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+    RUSTFLAGS="-C link-arg=-fuse-ld=lld" \
+    CMAKE_GENERATOR="Ninja"
 
 RUN set -eux; \
-    apk add --no-cache musl-dev make git ca-certificates gcc g++ cmake lld ;\
+    apk add --no-cache musl-dev make git ca-certificates gcc g++ cmake lld ninja-build ;\
     apkArch="$(apk --print-arch)"; \
     case "$apkArch" in \
         x86_64) rustArch='x86_64-unknown-linux-musl' ;; \
