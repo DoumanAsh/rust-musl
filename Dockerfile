@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM dhi.io/alpine-base:3.24-dev
 
 ARG RUST_VERSION=stable
 ENV RUSTUP_HOME=/usr/local/rustup \
