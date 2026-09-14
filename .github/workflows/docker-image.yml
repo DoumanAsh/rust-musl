@@ -154,7 +154,7 @@ jobs:
           echo "- Rustc version: $VERSION" >> $GITHUB_STEP_SUMMARY
           VERSION=$(echo "$VERSION" | cut -d"." -f 1,2)
           echo "rustc_short_version=$VERSION" >> "$GITHUB_OUTPUT"
-          VERSION=$(docker run --rm ${{ env.IMAGE_NAME }} cat /etc/alpine-release | cut -d"." -f 1,2)
+          VERSION=$(docker run --rm ${{ env.IMAGE_NAME }} cat /etc/os-release | grep VERSION_ID | cut -d"=" -f2 | cut -d"." -f 1,2)
           echo "alpine_version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "- Alpine version: $VERSION" >> $GITHUB_STEP_SUMMARY
           echo "## Vulnerabilities report 🔓" >> $GITHUB_STEP_SUMMARY
