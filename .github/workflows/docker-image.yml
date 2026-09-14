@@ -31,6 +31,7 @@ env:
   IMAGE_NAME: douman/rust-musl
   DOCKER_REGISTRY: docker.io
   GITHUB_REGISTRY: ghcr.io
+  QUAY_REGISTRY: quay.io
   DOCKER_IMAGE_NAME: douman/rust-musl
   GITHUB_IMAGE_NAME: doumanash/rust-musl
 
@@ -81,6 +82,15 @@ jobs:
           username: douman
           ## Set in repo Settings->Secrets->New repository secret
           password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Log into ${{ env.QUAY_REGISTRY }} registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.QUAY_REGISTRY }}
+          username: doumanash+rust-musl-ci
+          ## Set in repo Settings->Secrets->New repository secret
+          password: ${{ secrets.QUAY_TOKEN }}
 
       - name: Build and test Docker image
         id: build-docker
@@ -168,6 +178,11 @@ jobs:
             ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}
             ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}-alpine${{ steps.test.outputs.alpine_version }}
             ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}-alpine${{ steps.test.outputs.alpine_version }}
+            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}
+            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}
+            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}-alpine${{ steps.test.outputs.alpine_version }}
+            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}-alpine${{ steps.test.outputs.alpine_version }}
+
 
       - name: Push latest stable image
         if: inputs.rustc_version == '' && github.event_name != 'pull_request'
@@ -189,3 +204,8 @@ jobs:
             ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}
             ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}-alpine${{ steps.test.outputs.alpine_version }}
             ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}-alpine${{ steps.test.outputs.alpine_version }}
+            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:latest
+            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}
+            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}
+            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}-alpine${{ steps.test.outputs.alpine_version }}
+            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}-alpine${{ steps.test.outputs.alpine_version }}
