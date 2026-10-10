@@ -122,7 +122,7 @@ jobs:
           echo '<h3>Summary</h3>' >> trivy.html
           echo '<ul>' >> trivy.html
           jq -r '
-            [.Results[]?.Vulnerabilities[]?.Severity // "UNKNOWN"]
+            [.Results[]?.Vulnerabilities[]? | select(.Severity != null) | .Severity]
             | group_by(.) | map("<li>\(.[0]): \(length)</li>") | .[]
           ' "$TRIVY_JSON" >> trivy.html
           echo '</ul>' >> trivy.html
