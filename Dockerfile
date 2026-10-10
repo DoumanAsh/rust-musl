@@ -16,7 +16,7 @@ RUN set -eux; \
         aarch64) rustArch='aarch64-unknown-linux-musl' ;; \
         *) echo >&2 "unsupported architecture: $apkArch"; exit 1 ;; \
     esac; \
-    url="https://static.rust-lang.org/rustup/archive/1.29.0/${rustArch}/rustup-init"; \
+    url="https://static.rust-lang.org/rustup/archive/1.29.1/${rustArch}/rustup-init"; \
     wget "$url"; \
     chmod +x rustup-init; \
     ./rustup-init -y --no-modify-path --profile minimal --default-toolchain $RUST_VERSION --default-host ${rustArch}; \
