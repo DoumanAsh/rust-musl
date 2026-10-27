@@ -1,9 +1,10 @@
 FROM dhi.io/alpine-base:3.24-dev
 
 ARG RUST_VERSION=stable
+# ninja located in some retarded path /usr/lib/ninja-build/bin/ rather than standard bin directory so make sure adjust it
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
-    PATH=/usr/local/cargo/bin:$PATH \
+    PATH=/usr/local/cargo/bin:/usr/lib/ninja-build/bin/:$PATH \
     RUST_VERSION=$RUST_VERSION \
     RUSTFLAGS="-C link-arg=-fuse-ld=lld" \
     CMAKE_GENERATOR="Ninja"
