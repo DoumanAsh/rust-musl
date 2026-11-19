@@ -9,9 +9,11 @@ Minimal container to build mostly pure Rust projects using `x86_64-unknown-linux
 ## Properties
 
 - `lld` is used as default linked via environment variable `RUSTFLAGS`. This will stop being necessary once default linker shifts to lld on musl targets
-- `musl-dev`, `make`, `git` `cmake` and `g++` are installed to provide sufficient baseline for compiling C world dependencies
+- `musl-dev`, `make`, `git` and `g++` are installed to provide sufficient baseline for compiling C world dependencies
 - `rustup` and all installed binaries are stripped aggressively if necessary
-- `cargo-auditable` installed to allow to embed dependencies into binary
+- `cmake` generally tool you need to build C/C++ dependencies
+- `ninja` good alternative to make and used by `cmake` by default to speed up builds of your C/C++ dependencies
+- `cargo-auditable` CLI utility allows to embed dependencies into binary. Use `cargo auditable` in the same way as `cargo build`
 
 ## Tags
 
