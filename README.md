@@ -11,6 +11,7 @@ Minimal container to build mostly pure Rust projects using `x86_64-unknown-linux
 - `lld` is used as default linked via environment variable `RUSTFLAGS`. This will stop being necessary once default linker shifts to lld on musl targets
 - `musl-dev`, `make`, `git` `cmake` and `g++` are installed to provide sufficient baseline for compiling C world dependencies
 - `rustup` and all installed binaries are stripped aggressively if necessary
+- `cargo-auditable` installed to allow to embed dependencies into binary
 
 ## Tags
 

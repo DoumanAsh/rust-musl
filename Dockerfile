@@ -1,6 +1,8 @@
 FROM dhi.io/alpine-base:3.24-dev
 
 ARG RUST_VERSION=stable
+ARG RUSTUP_VERSION=1.29.3
+ARG CARGO_AUDITABLE=0.7.7
 # ninja located in some retarded path /usr/lib/ninja-build/bin/ rather than standard bin directory so make sure adjust it
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
@@ -17,11 +19,14 @@ RUN set -eux; \
         aarch64) rustArch='aarch64-unknown-linux-musl' ;; \
         *) echo >&2 "unsupported architecture: $apkArch"; exit 1 ;; \
     esac; \
-    url="https://static.rust-lang.org/rustup/archive/1.29.1/${rustArch}/rustup-init"; \
+    url="https://static.rust-lang.org/rustup/archive/$RUSTUP_VERSION/${rustArch}/rustup-init"; \
     wget "$url"; \
     chmod +x rustup-init; \
     ./rustup-init -y --no-modify-path --profile minimal --default-toolchain $RUST_VERSION --default-host ${rustArch}; \
     rm rustup-init; \
     rm /usr/local/cargo/env ;\
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
+    wget https://github.com/rust-secure-code/cargo-auditable/releases/download/v$CARGO_AUDITABLE/cargo-auditable-${rustArch}.tar.xz -O /tmp/cargo-auditable-${rustArch}.tar.xz ;\
+    tar -xf /tmp/cargo-auditable-${rustArch}.tar.xz -C $CARGO_HOME/ --strip-components=1 cargo-auditable-${rustArch}/cargo-auditable ;\
+    rm /tmp/cargo-auditable-${rustArch}.tar.xz ;\
     find $RUSTUP_HOME -type f -executable -exec strip --strip-unneeded {} \; && find $RUSTUP_HOME -name *.so -exec strip --strip-unneeded {} \; && find $RUSTUP_HOME -name *.rlib -exec strip -d {} \; && find $RUSTUP_HOME -name *.a -exec strip -d {} \;
