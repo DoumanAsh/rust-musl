@@ -27,6 +27,7 @@ RUN set -eux; \
     rm /usr/local/cargo/env ;\
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
     wget https://github.com/rust-secure-code/cargo-auditable/releases/download/v$CARGO_AUDITABLE/cargo-auditable-${rustArch}.tar.xz -O /tmp/cargo-auditable-${rustArch}.tar.xz ;\
-    tar -xf /tmp/cargo-auditable-${rustArch}.tar.xz -C $CARGO_HOME/ --strip-components=1 cargo-auditable-${rustArch}/cargo-auditable ;\
+    tar -xf /tmp/cargo-auditable-${rustArch}.tar.xz -C $CARGO_HOME/bin/ --strip-components=1 cargo-auditable-${rustArch}/cargo-auditable ;\
     rm /tmp/cargo-auditable-${rustArch}.tar.xz ;\
+    chmod +x $CARGO_HOME/bin/cargo-auditable ;\
     find $RUSTUP_HOME -type f -executable -exec strip --strip-unneeded {} \; && find $RUSTUP_HOME -name *.so -exec strip --strip-unneeded {} \; && find $RUSTUP_HOME -name *.rlib -exec strip -d {} \; && find $RUSTUP_HOME -name *.a -exec strip -d {} \;
