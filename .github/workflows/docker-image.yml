@@ -27,155 +27,42 @@ on:
         default: ''
         type: string
 
-env:
-  IMAGE_NAME: douman/rust-musl
-  DOCKER_REGISTRY: docker.io
-  GITHUB_REGISTRY: ghcr.io
-  QUAY_REGISTRY: quay.io
-  DOCKER_IMAGE_NAME: douman/rust-musl
-  GITHUB_IMAGE_NAME: doumanash/rust-musl
-
 jobs:
-  build:
+  container:
+    name: "${{ github.event.repository.name }}:${{ inputs.rustc_version || 'stable' }}"
+    if: github.event.pull_request.draft == false
     permissions:
       contents: read
       packages: write
       pull-requests: write
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-        with:
-          platforms: arm64
-
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log into ${{ env.DOCKER_REGISTRY }} registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ env.DOCKER_REGISTRY }}
-          username: douman
-          ## Set in repo Settings->Secrets->New repository secret
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      - name: Log into ${{ env.GITHUB_REGISTRY }} registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ env.GITHUB_REGISTRY }}
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Access to docker hardened images
-      - name: Log into dhi.io registry
-        uses: docker/login-action@v4
-        with:
-          registry: dhi.io
-          username: douman
-          ## Set in repo Settings->Secrets->New repository secret
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      - name: Log into ${{ env.QUAY_REGISTRY }} registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ env.QUAY_REGISTRY }}
-          username: doumanash+rust-musl-ci
-          ## Set in repo Settings->Secrets->New repository secret
-          password: ${{ secrets.QUAY_TOKEN }}
-
-      - name: Build and test Docker image
-        id: build-docker
-        uses: docker/build-push-action@v7
-        env:
-          DOCKER_BUILD_SUMMARY: false
-        with:
-          context: .
-          build-args: "RUST_VERSION=${{ inputs.rustc_version || 'stable' }}"
-          platforms: linux/amd64
-          load: true
-          sbom: false
-          provenance: false
-          tags: ${{ env.IMAGE_NAME }}:latest
-
-      - name: Test and generate summary
-        id: test
-        run: |
-          echo '## Build docker ${{ inputs.rustc_version || 'stable' }} image 🚀' >> $GITHUB_STEP_SUMMARY
-          VERSION=$(docker run --rm ${{ env.IMAGE_NAME }} rustc --version | cut -d" " -f2)
+    uses: DoumanAsh/douman-ci/.github/workflows/release-container.yaml@master
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+      QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+    with:
+      # Make sure to create repos in all container registries using the same name as the repo
+      image_name: ${{ github.event.repository.name }}
+      # Need dhi.io for hardened alpine image
+      dhi_login: true
+      container_file: "Dockerfile"
+      use_oci: true
+      platform: "linux"
+      archs: "amd64 arm64"
+      upload_container: ${{ github.event.pull_request.draft == false }}
+      docker_user: "douman"
+      github_user: "doumanash"
+      quay_user: "doumanash"
+      quay_bot_suffix: "rust-musl-ci"
+      build_args: RUST_VERSION=${{ inputs.rustc_version || 'stable' }}
+      post_build_script: |
+          VERSION=$(podman run --rm ${{ github.event.repository.name }} rustc --version | cut -d" " -f2)
           echo "rustc_version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "- Rustc version: $VERSION" >> $GITHUB_STEP_SUMMARY
-          VERSION=$(echo "$VERSION" | cut -d"." -f 1,2)
-          echo "rustc_short_version=$VERSION" >> "$GITHUB_OUTPUT"
-          VERSION=$(docker run --rm ${{ env.IMAGE_NAME }} cat /etc/os-release | grep VERSION_ID | cut -d"=" -f2 | tr -d '"' | cut -d"." -f 1,2)
-          echo "alpine_version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "- Alpine version: $VERSION" >> $GITHUB_STEP_SUMMARY
+          SHORT_VERSION=$(echo "$VERSION" | cut -d"." -f 1,2)
+          echo "rustc_short_version=$SHORT_VERSION" >> "$GITHUB_OUTPUT"
+          ALPINE_VERSION=$(podman run --rm ${{ github.event.repository.name }} cat /etc/os-release | grep VERSION_ID | cut -d"=" -f2 | tr -d '"' | cut -d"." -f 1,2)
+          echo "alpine_version=$ALPINE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "- Alpine version: $ALPINE_VERSION" >> $GITHUB_STEP_SUMMARY
 
-      - name: Check vulnerabilities
-        uses: DoumanAsh/douman-ci/.github/actions/trivy-report-vuln@master
-        with:
-          image_ref: "${{ env.IMAGE_NAME }}:latest"
-          image_name: "rust-musl-${{ steps.test.outputs.rustc_version }}"
-          pr_comment: ${{ github.event_name == 'pull_request' }}
-          pr_comment_recreate: true
-
-      - name: Push ${{ inputs.rustc_version }} image
-        if: inputs.rustc_version != '' && github.event_name != 'pull_request'
-        id: push-version-docker
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          build-args: "RUST_VERSION=${{ inputs.rustc_version || 'stable' }}"
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          sbom: false
-          provenance: false
-          tags: |
-            ${{env.DOCKER_REGISTRY}}/${{ env.DOCKER_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}
-            ${{env.DOCKER_REGISTRY}}/${{ env.DOCKER_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}
-            ${{env.DOCKER_REGISTRY}}/${{ env.DOCKER_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}-alpine${{ steps.test.outputs.alpine_version }}
-            ${{env.DOCKER_REGISTRY}}/${{ env.DOCKER_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}-alpine${{ steps.test.outputs.alpine_version }}
-            ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}
-            ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}
-            ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}-alpine${{ steps.test.outputs.alpine_version }}
-            ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}-alpine${{ steps.test.outputs.alpine_version }}
-            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}
-            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}
-            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}-alpine${{ steps.test.outputs.alpine_version }}
-            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}-alpine${{ steps.test.outputs.alpine_version }}
-
-
-      - name: Push latest stable image
-        if: inputs.rustc_version == '' && github.event_name != 'pull_request'
-        id: push-stable-docker
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          build-args: "RUST_VERSION=${{ inputs.rustc_version || 'stable' }}"
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          sbom: false
-          provenance: false
-          tags: |
-            ${{env.DOCKER_REGISTRY}}/${{ env.DOCKER_IMAGE_NAME }}:latest
-            ${{env.DOCKER_REGISTRY}}/${{ env.DOCKER_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}
-            ${{env.DOCKER_REGISTRY}}/${{ env.DOCKER_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}
-            ${{env.DOCKER_REGISTRY}}/${{ env.DOCKER_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}-alpine${{ steps.test.outputs.alpine_version }}
-            ${{env.DOCKER_REGISTRY}}/${{ env.DOCKER_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}-alpine${{ steps.test.outputs.alpine_version }}
-            ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:latest
-            ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}
-            ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}
-            ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}-alpine${{ steps.test.outputs.alpine_version }}
-            ${{env.GITHUB_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}-alpine${{ steps.test.outputs.alpine_version }}
-            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:latest
-            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}
-            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}
-            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_version }}-alpine${{ steps.test.outputs.alpine_version }}
-            ${{env.QUAY_REGISTRY}}/${{ env.GITHUB_IMAGE_NAME }}:${{ steps.test.outputs.rustc_short_version }}-alpine${{ steps.test.outputs.alpine_version }}
+          echo "tags=latest $VERSION $SHORT_VERSION $VERSION-alpine$ALPINE_VERSION $SHORT_VERSION-alpine$ALPINE_VERSION" >> "$GITHUB_OUTPUT"
