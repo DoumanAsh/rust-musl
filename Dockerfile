@@ -17,6 +17,8 @@ RUN set -eux; \
     case "$apkArch" in \
         x86_64) rustArch='x86_64-unknown-linux-musl' ;; \
         aarch64) rustArch='aarch64-unknown-linux-musl' ;; \
+        ppc64le) rustArch='powerpc64le-unknown-linux-musl' ;;\
+        riscv64) rustArch='riscv64gc-unknown-linux-musl' ;;\
         *) echo >&2 "unsupported architecture: $apkArch"; exit 1 ;; \
     esac; \
     url="https://static.rust-lang.org/rustup/archive/$RUSTUP_VERSION/${rustArch}/rustup-init"; \
