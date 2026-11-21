@@ -43,6 +43,11 @@ jobs:
     with:
       # Make sure to create repos in all container registries using the same name as the repo
       image_name: ${{ github.event.repository.name }}
+      annotations: |
+        org.opencontainers.image.title=${{ github.event.repository.name }}
+        org.opencontainers.image.description=${{ github.event.repository.description }}
+        org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+        org.opencontainers.image.revision=${{ github.sha }}
       # Need dhi.io for hardened alpine image
       dhi_login: true
       container_file: "Dockerfile"
